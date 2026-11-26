@@ -1,18 +1,30 @@
 # example-lineage-plsql
 
 ![Conformance](https://img.shields.io/badge/Conformance-Check--All%20Passing-brightgreen)
-[![Build and Test](https://github.com/jurgenei/example-lineage-plsql/actions/workflows/ci.yml/badge.svg)](https://github.com/jurgenei/example-lineage-plsql/actions/workflows/ci.yml)
-[![Coverage CI](https://github.com/jurgenei/example-lineage-plsql/actions/workflows/coverage.yml/badge.svg)](https://github.com/jurgenei/example-lineage-plsql/actions/workflows/coverage.yml)
-[![CodeQL](https://github.com/jurgenei/example-lineage-plsql/actions/workflows/codeql.yml/badge.svg)](https://github.com/jurgenei/example-lineage-plsql/actions/workflows/codeql.yml)
-[![Dependency Check](https://github.com/jurgenei/example-lineage-plsql/actions/workflows/dependency-check.yml/badge.svg)](https://github.com/jurgenei/example-lineage-plsql/actions/workflows/dependency-check.yml)
-[![SpotBugs Security](https://github.com/jurgenei/example-lineage-plsql/actions/workflows/spotbugs-security.yml/badge.svg)](https://github.com/jurgenei/example-lineage-plsql/actions/workflows/spotbugs-security.yml)
-[![Dependabot](https://img.shields.io/badge/dependabot-enabled-025E8C?logo=dependabot)](https://github.com/jurgenei/example-lineage-plsql/security/dependabot)
-[![Coverage](https://codecov.io/gh/jurgenei/example-lineage-plsql/graph/badge.svg)](https://codecov.io/gh/jurgenei/example-lineage-plsql)
+[![Build and Test](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/ci.yml/badge.svg)](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/ci.yml)
+[![Coverage CI](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/coverage.yml/badge.svg)](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/coverage.yml)
+[![CodeQL](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/codeql.yml/badge.svg)](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/codeql.yml)
+[![Dependency Check](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/dependency-check.yml/badge.svg)](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/dependency-check.yml)
+[![SpotBugs Security](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/spotbugs-security.yml/badge.svg)](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/spotbugs-security.yml)
+[![Dependabot](https://img.shields.io/badge/dependabot-enabled-025E8C?logo=dependabot)](https://github.com/flowdigger/example-lineage-plsql/security/dependabot)
+[![Coverage](https://codecov.io/gh/flowdigger/example-lineage-plsql/graph/badge.svg)](https://codecov.io/gh/flowdigger/example-lineage-plsql)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/java-21+-green.svg)](https://www.oracle.com/java/)
 [![Gradle](https://img.shields.io/badge/gradle-8+-blue.svg)](https://gradle.org/)
 
 A runnable reference implementation demonstrating how lineage can be derived from implementation artifacts, verified through automated tests, and published as reusable lineage and graph-based knowledge.
+
+## Position in XIR spine
+
+- **Problem solved**: turn architecture and PL/SQL implementation evidence into reproducible lineage knowledge.
+- **Relation to XIR**: application layer built on top of XIR-based observation and derivation tooling.
+- **Why it matters**: proves lineage/governance outcomes as executable, testable artifacts instead of static diagrams.
+
+```text
+Structured Knowledge -> XIR -> Observation -> Derivation -> Knowledge -> Applications
+```
+
+Core reading: [XIR starter kit](https://github.com/jurgenei/jurgenei/blob/main/xir-starter-kit/README.md) and [flowdigger/xir-g4](https://github.com/flowdigger/xir-g4).
 
 The project provides an end-to-end example spanning:
 
@@ -60,9 +72,9 @@ The repository is intended as:
 
 ---
 
-# Relationship to the Jurgenei Initiative
+# Relationship to Flowdigger
 
-This repository is the executable reference implementation.
+This repository is an executable Flowdigger reference implementation.
 
 Broader concepts such as:
 
@@ -71,8 +83,6 @@ Broader concepts such as:
 - Extract → Derive → Resolve → Publish
 - Canonical Enterprise Graphs
 - Enterprise Knowledge Compilation
-
-belong in the `jurgenei` repository.
 
 This repository focuses on demonstrating those ideas through running software and verifiable results.
 

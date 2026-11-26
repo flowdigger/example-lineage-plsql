@@ -1,7 +1,7 @@
 plugins {
     id 'base'
     id 'org.flowdigger.gradle.archi'
-    id 'org.flowdigger.gradle.xml'
+    id 'org.flowdigger.xml'
 }
 
 group =  rootProject.group

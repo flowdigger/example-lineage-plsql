@@ -4,9 +4,15 @@ plugins {
     id 'com.github.spotbugs' version '6.5.11' apply false
 
     // Data lineage plugin publishing
-    id 'org.flowdigger.gradle.archi' version '0.1.10' apply false
-    id 'org.flowdigger.gradle.xml' version '0.1.13' apply false
-    id 'org.flowdigger.gradle.antlr.plsql' version '0.1.7' apply false
+    id 'org.flowdigger.gradle.archi' version '1.0.0' apply false
+
+    // Current lineage pipeline and parser plugins
+    id 'org.flowdigger.antlr' version '1.0.3' apply false
+    id 'org.flowdigger.antlr.plsql' version '1.0.1' apply false
+    id 'org.flowdigger.xml' version '1.0.1' apply false
+    id 'org.flowdigger.python' version '1.0.1' apply false
+    id 'org.flowdigger.ooxml' version '1.0.1' apply false
+    id 'org.flowdigger.lineage' version '1.0.2'
 }
 
 version = '0.1.5'
@@ -15,6 +21,53 @@ group = 'org.flowdigger.example.lineage.plsql'
 allprojects {
     repositories {
         mavenCentral()
+    }
+}
+
+def gLineageSourceRoot = layout.buildDirectory.dir('lineage-source').get().asFile
+def gLineageBuildRoot = layout.buildDirectory.dir('lineage-uniform').get().asFile
+def gLineageRepoName = 'example-lineage-plsql'
+def gLineageRepoDir = new File(gLineageSourceRoot, gLineageRepoName)
+def gLineageDdlDirectory = project(':application').layout.buildDirectory.dir('ddl').get().asFile
+def gLineageSourceDirectory = gLineageRepoDir.toPath()
+        .relativize(gLineageDdlDirectory.toPath())
+        .toString()
+def gArchitectureModelFile = project(':architecture').layout.buildDirectory
+        .file('archi-export/test-lineage.export.xml').get().asFile
+
+lineagePipeline {
+    sourceRoot = gLineageSourceRoot.absolutePath
+    buildRoot = gLineageBuildRoot.absolutePath
+    architectureModelFile = gArchitectureModelFile
+    architecture {
+        inputFormat.set('archimate-exchange')
+        dependsOn(':architecture:assembleArchitectureModel')
+    }
+    schemaNames = ['dsa']
+    schemaAliases = [demo_dsa_owner: 'dsa']
+    profiles {
+        profile('plsql') {
+            strategy.set('plsql')
+        }
+    }
+    repos {
+        repo {
+            uri.set('https://github.com/flowdigger/example-lineage-plsql')
+            ref.set('main')
+            sourceSet('application') {
+                parserPlugin.set('org.flowdigger.antlr.plsql')
+                profile.set('plsql')
+                sourceDirectory.set(gLineageSourceDirectory)
+                schemas.set(['dsa'])
+                includes.set(['**/*.sql'])
+            }
+        }
+    }
+}
+
+afterEvaluate {
+    tasks.named('syncLineageRepos') {
+        dependsOn(':application:prepareApplicationAssets')
     }
 }
 
@@ -110,13 +163,13 @@ tasks.register('assembleArchitecture') {
 tasks.register('generateLineage') {
     group = 'lineage'
     description = 'Generates lineage artifacts from application sources.'
-    dependsOn(':application:prepareApplicationAssets', ':lineage:generateTableLineage')
+    dependsOn(':application:prepareApplicationAssets', ':architecture:assembleArchitectureModel', 'publishLineage')
 
     outputs.file(reportsDir.map { it.file('lineage-report.html') })
     doLast {
         def appDir = project(':application').layout.buildDirectory.dir('plsql-assets').get().asFile
-        def lineageAstDir = project(':lineage').layout.buildDirectory.dir('ast').get().asFile
-        def lineageExtractDir = project(':lineage').layout.buildDirectory.dir('extract').get().asFile
+        def lineageAstDir = new File(gLineageBuildRoot, '1.parse/sql/application/ast')
+        def lineageExtractDir = new File(gLineageBuildRoot, '2.observe/sql/application')
         requireFiles([
                 new File(appDir, 'application-assets.txt')
         ])
@@ -127,7 +180,7 @@ tasks.register('generateLineage') {
                 "applicationAssets=${appDir}",
                 "lineageAstDir=${lineageAstDir}",
                 "lineageExtractDir=${lineageExtractDir}",
-                "mode=stub-ready-for-future-lineage-contract"
+                "mode=gradle-lineage-plugin"
         ])
     }
 }
