@@ -1,354 +1,160 @@
-# example-lineage-plsql
+# PL/SQL lineage: from source code to system knowledge
 
-![Conformance](https://img.shields.io/badge/Conformance-Check--All%20Passing-brightgreen)
 [![Build and Test](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/ci.yml/badge.svg)](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/ci.yml)
 [![Coverage CI](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/coverage.yml/badge.svg)](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/coverage.yml)
 [![CodeQL](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/codeql.yml/badge.svg)](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/codeql.yml)
 [![Dependency Check](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/dependency-check.yml/badge.svg)](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/dependency-check.yml)
 [![SpotBugs Security](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/spotbugs-security.yml/badge.svg)](https://github.com/flowdigger/example-lineage-plsql/actions/workflows/spotbugs-security.yml)
-[![Dependabot](https://img.shields.io/badge/dependabot-enabled-025E8C?logo=dependabot)](https://github.com/flowdigger/example-lineage-plsql/security/dependabot)
 [![Coverage](https://codecov.io/gh/flowdigger/example-lineage-plsql/graph/badge.svg)](https://codecov.io/gh/flowdigger/example-lineage-plsql)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Java](https://img.shields.io/badge/java-21+-green.svg)](https://www.oracle.com/java/)
-[![Gradle](https://img.shields.io/badge/gradle-8+-blue.svg)](https://gradle.org/)
 
-A runnable reference implementation demonstrating how lineage can be derived from implementation artifacts, verified through automated tests, and published as reusable lineage and graph-based knowledge.
+How can you discover where data comes from when the answer lives in code rather
+than a diagram? This Java and Gradle project explores that question with an
+Oracle PL/SQL example. It derives table lineage from Liquibase and PL/SQL
+artifacts, checks expected relationships, and publishes artifacts you can inspect.
+An ArchiMate model supplies architecture evidence; a separate Neo4j flow
+demonstrates graph verification with stub data.
 
-## Position in XIR spine
+The broader idea is to treat technical artifacts as **evidence** and
+reconstruct knowledge through explicit, reproducible transformations rather
+than maintain lineage by hand. See
+[From Data Lineage to System Knowledge](https://www.linkedin.com/pulse/from-data-lineage-system-knowledge-jurgen-hildebrand-kkpce/)
+for the motivation and [Flowdigger's derivation lifecycle](https://flowdigger.github.io/core-concepts/derivation-lifecycle/)
+for the pipeline.
 
-- **Problem solved**: turn architecture and PL/SQL implementation evidence into reproducible lineage knowledge.
-- **Relation to XIR**: application layer built on top of XIR-based observation and derivation tooling.
-- **Why it matters**: proves lineage/governance outcomes as executable, testable artifacts instead of static diagrams.
+## What this example does
+
+The customer procedure reads `raw_customer` and `customer_reference`, writes
+`valid_customer`, then reads `valid_customer` and writes `merged_customer`.
+The lineage pipeline extracts DDL from the Liquibase changelogs, parses the
+PL/SQL, derives and validates flows, and publishes lineage. The example-specific
+verification checks these table relationships:
 
 ```text
-Structured Knowledge -> XIR -> Observation -> Derivation -> Knowledge -> Applications
+dsa.raw_customer       -> dsa.valid_customer
+dsa.customer_reference -> dsa.valid_customer
+dsa.valid_customer     -> dsa.merged_customer
 ```
 
-Core reading: [XIR starter kit](https://github.com/jurgenei/jurgenei/blob/main/xir-starter-kit/README.md) and [flowdigger/xir-g4](https://github.com/flowdigger/xir-g4).
+The pipeline uses **XIR** (eXtensible Intermediate Representation) for
+structured intermediate artifacts. Think of it as a representation for
+structured data, not the lineage model itself. You do not need deep XML or XIR
+knowledge to run the example; learn the notation and transformation details
+when you inspect or extend the pipeline.
 
-The project provides an end-to-end example spanning:
+### Current boundaries
 
-- Architecture intent
-- Oracle schema management with Liquibase
-- PL/SQL transformations
-- Lineage derivation
-- Knowledge graph publication
-- Automated verification
-- End-to-end reporting
+- The lineage tasks extract source DDL from Liquibase files; they do not need to
+  deploy an Oracle schema or execute the procedure to derive lineage. Separate
+  Oracle integration tests exercise database behavior.
+- `endToEndTest` orchestrates architecture export, lineage generation and
+  graph verification, but the Neo4j flow loads **stub data**, not the published
+  lineage artifacts. It does not prove that generated lineage reaches Neo4j.
+- `verifyExampleLineage` checks the customer procedure and GraphML edges
+  separately; `endToEndTest` does not invoke that specific verification task.
+- Evidence traceability is a design goal, not a complete end-to-end guarantee.
+  Provenance is carried through merge but remains incomplete after stitch;
+  see [ADR-0011](https://flowdigger.github.io/adr/0011-preserve-provenance/)
+  and [implementation status](https://flowdigger.github.io/lineage/#implementation-status).
 
-Rather than treating lineage as documentation, this repository treats lineage as a reproducible engineering artifact.
+## Get started
 
----
+### Prerequisites
 
-# Why This Repository Exists
+- JDK 21. Use the included Gradle wrapper; a separate Gradle installation is
+  not required.
+- Git and network access for dependencies, architecture tooling, and source
+  synchronization.
+- Archi runtime for the architecture export. The architecture Gradle plugin
+  configures the Archi version used by this project.
+- Docker for the Neo4j flow and Oracle integration tests.
 
-Many lineage examples produce diagrams.
+The lineage pipeline syncs the configured `main` branch of
+`flowdigger/example-lineage-plsql` into `build/lineage-source/` and consumes
+DDL extracted from the **local** Liquibase files under
+`build/projects/application/ddl/`. Be aware of this distinction when working
+with local changes. If a sibling `gradle-lineage-plugin` checkout exists, the
+build uses it; otherwise it resolves the configured plugin. CI checks out pinned
+build logic.
 
-This repository demonstrates a complete and executable lineage lifecycle:
+### Generate and verify customer lineage
 
-```mermaid
-flowchart LR
-    A[Architecture Intent]
-    B[Implementation Reality]
-    C[Derived Knowledge]
-    D[Verifiable Lineage]
-    A --> C
-    B --> C
-    C --> D
+```bash
+./gradlew generateLineage verifyExampleLineage
 ```
 
-Every lineage assertion should:
+Start with the procedure in
+[`004-procedure.xml`](2-application/src/main/resources/db/changelog/changes/004-procedure.xml),
+then follow the generated artifacts:
 
-- originate from evidence
-- be reproducible
-- be testable
-- be traceable back to source artifacts
+| What to inspect | Default location |
+|---|---|
+| Extracted DDL | `build/projects/application/ddl/` |
+| Parsed PL/SQL syntax as XIR | `build/lineage-uniform/1.parse/sql/application/ast/` |
+| Semantic observations as XIR | `build/lineage-uniform/2.observe/sql/application/` |
+| Published GraphML | `build/lineage-uniform/9.publish/artifacts/graphml/lineage.graphml` |
+| Lineage report | `build/reports/lineage-report.html` |
 
-The repository is intended as:
+`verifyExampleLineage` checks the procedure's AST and observation and the
+three expected GraphML edges above. Published artifacts also include RDF, JSON,
+and per-processor XIR. Set `-PbuildRoot=<path>` or `LINEAGE_BUILD_ROOT` to
+change the default lineage output directory.
 
-- a learning resource
-- a reference implementation
-- a verification platform
-
----
-
-# Relationship to Flowdigger
-
-This repository is an executable Flowdigger reference implementation.
-
-Broader concepts such as:
-
-- Near-Reality Lineage
-- Continuous Architecture Reconciliation
-- Extract → Derive → Resolve → Publish
-- Canonical Enterprise Graphs
-- Enterprise Knowledge Compilation
-
-This repository focuses on demonstrating those ideas through running software and verifiable results.
-
----
-
-# What Gets Built
-
-```mermaid
-flowchart TB
-    A[ArchiMate Model] --> B[Architecture Export]
-    B --> C[Liquibase Deployment]
-    C --> D[Oracle Schema]
-    D --> E[PL/SQL Procedures]
-    E --> F[Lineage Artifacts]
-    F --> G[Neo4j Knowledge Graph]
-    G --> H[Verification Reports]
-```
-
----
-
-# Learning Paths
-
-## Reader
-
-Understand the concepts, architecture, reports and generated outputs.
-
-## Practitioner
-
-Run the complete lifecycle and inspect generated lineage.
-
-## Contributor
-
-Extend architecture, database, lineage or graph capabilities while maintaining verification.
-
----
-
-# Progressive Learning Levels
-
-## Level 0 – Environment
-
-Build the platform and start required services.
-
-## Level 1 – Architecture Intent
-
-Export architecture models and establish intended relationships.
-
-## Level 2 – Database Model
-
-Deploy Liquibase definitions and create Oracle objects.
-
-## Level 3 – Transformation Logic
-
-Execute PL/SQL transformations.
-
-## Level 4 – Lineage Derivation
-
-Generate lineage from deployed artifacts.
-
-## Level 5 – Knowledge Graph Publication
-
-Load derived information into Neo4j.
-
-## Level 6 – Verification
-
-Validate expected relationships and lineage paths.
-
----
-
-# Technology Stack
-
-- Java 21
-- Spring Boot 3.3
-- Liquibase XML changelogs
-- Oracle XE via Testcontainers
-- Neo4j via Testcontainers
-- Gradle
-
----
-
-# Repository Structure
-
-```mermaid
-flowchart LR
-    R[example-lineage-plsql]
-    R --> A[1-architecture]
-    A --> A1[Architecture intent exports]
-    R --> B[2-application]
-    B --> B1[Spring Boot runtime]
-    B --> B2[Liquibase assets]
-    B --> B3[PL/SQL assets under analysis]
-    R --> C[3-lineage]
-    C --> C1[Generated lineage artifacts]
-    R --> D[4-knowledge-graph]
-    D --> D1[Neo4j publication, verification, metadata API emulator]
-    R --> E[.github/workflows]
-```
-
----
-
-# Prerequisites
-
-- Docker
-- Java 21
-- Archi Runtime (for architecture export)
-
----
-
-# Quick Start
-
-Run the complete end-to-end lifecycle:
+### Run the graph lifecycle
 
 ```bash
 ./gradlew endToEndTest
 ```
 
-Or execute stages individually:
+Inspect `build/reports/end-to-end-report.html` and the graph reports under
+`build/projects/knowledgeGraph/graph-report/`. This runs the stub-backed graph
+flow described above; use `verifyExampleLineage` as well when checking the
+generated customer lineage.
+
+## Explore and contribute
+
+| Directory | Role |
+|---|---|
+| [`1-architecture`](1-architecture/) | ArchiMate model and architecture exports |
+| [`2-application`](2-application/) | Spring Boot application, Liquibase changelogs and PL/SQL |
+| [`3-lineage`](3-lineage/) | Pipeline configuration, reporting and example verification |
+| [`4-knowledge-graph`](4-knowledge-graph/) | Neo4j stub flow, graph verification and metadata API emulator |
+
+The root-applied lineage plugin is configured in
+[`3-lineage/lineage-pipeline.gradle`](3-lineage/lineage-pipeline.gradle).
+Start a contribution by tracing an existing source artifact through its
+generated observation and published result, then add or update checks for the
+behavior you change. See [ARCHITECTURE.md](ARCHITECTURE.md) for the module
+overview and the [knowledge graph README](4-knowledge-graph/README.md) for
+its API and tests.
+
+Useful focused commands:
 
 ```bash
-./gradlew assembleArchitecture
-./gradlew generateLineage
-./gradlew startKnowledgeGraph
-./gradlew loadKnowledgeGraph
-./gradlew verifyKnowledgeGraph
-./gradlew endToEndTest
-```
+# Structure and cross-module contracts
+./gradlew :application:test --tests name.jurgenei.example.lineage.GrowthStructureBootstrapTest --tests name.jurgenei.example.lineage.GrowthCrossModuleContractTest --tests name.jurgenei.example.lineage.GrowthEndToEndGraphVerificationContractTest
 
-Expected outcome:
-
-```text
-✓ Architecture exported
-✓ Schema deployed
-✓ Procedures created
-✓ Lineage generated
-✓ Graph loaded
-✓ Verification completed
-```
-
----
-
-# Verification Strategy
-
-Lineage is treated as an engineering discipline.
-
-Verification is performed through:
-
-- Structure bootstrap tests
-- Cross-module contract tests
-- End-to-end graph verification tests
-- Oracle integration tests
-
-Build success demonstrates that derived outputs satisfy expected relationships.
-
----
-
-# TDD Growth Progression
-
-- GrowthStructureBootstrapTest
-- GrowthCrossModuleContractTest
-- GrowthEndToEndGraphVerificationContractTest
-- LineageLoaderIntegrationTest
-
-The project grows incrementally from structure validation toward full end-to-end lineage verification.
-
----
-
-# Generated Reports
-
-All Gradle build outputs are under the root `build/` directory. Subproject
-outputs are isolated under `build/projects/<project-name>/` (for example,
-`build/projects/application/`); root task outputs remain directly under `build/`.
-Running `./gradlew clean` removes both root and subproject outputs.
-
-## Root Reports
-
-```mermaid
-flowchart LR
-    R[build/reports]
-    R --> R1[architecture-report.html]
-    R --> R2[lineage-report.html]
-    R --> R3[knowledge-graph-start-report.html]
-    R --> R4[graph-load-report.html]
-    R --> R5[graph-report.html]
-    R --> R6[end-to-end-report.html]
-```
-
-## Knowledge Graph Reports
-
-```mermaid
-flowchart LR
-    G[build/projects/knowledgeGraph/graph-report]
-    G --> G1[container-start-report.json]
-    G --> G2[load-report.json]
-    G --> G3[graph-dump.json]
-    G --> G4[verification-report.json]
-```
-
----
-
-# CI/CD
-
-The CI pipeline validates four gated stages:
-
-- structure-and-contract-tests
-- lineage-tests
-- graph-tests
-- e2e-tests
-
-Coverage is generated through JaCoCo and published via Codecov.
-
----
-
-# Local Development
-
-Run staged growth tests:
-
-```bash
-./gradlew :application:test --tests name.jurgenei.example.lineage.GrowthStructureBootstrapTest
-./gradlew :application:test --tests name.jurgenei.example.lineage.GrowthCrossModuleContractTest
-./gradlew :application:test --tests name.jurgenei.example.lineage.GrowthEndToEndGraphVerificationContractTest
-```
-
-Run Oracle integration tests:
-
-```bash
+# Oracle integration test and knowledge graph module tests
 ./gradlew :application:test --tests name.jurgenei.example.lineage.LineageLoaderIntegrationTest
-```
-
-Run graph verification:
-
-```bash
-./gradlew verifyKnowledgeGraph endToEndTest
-```
-
-Run module-isolated metadata API and graph tests:
-
-```bash
 ./gradlew :knowledgeGraph:test
 ```
 
----
+Application and knowledge graph tests use Mockito's subclass mock maker. It
+cannot mock final classes or methods, or static methods; tests requiring inline
+mocking must explicitly enable Mockito's inline mock maker.
 
-# Design Principles
+Gradle outputs live under `build/`; subproject outputs are under
+`build/projects/<project-name>/`. `./gradlew clean` removes both.
 
-- Derive rather than manually maintain metadata.
-- Keep lineage reproducible.
-- Prefer evidence over documentation.
-- Keep module contracts explicit.
-- Verify graph structures deterministically.
-- Treat architecture and lineage as continuously verifiable artifacts.
+## Learn more
 
----
-
-# Success Criteria
-
-A successful build should prove that:
-
-```mermaid
-flowchart TD
-    A[Architecture intent] --> B[Deployment artifacts]
-    B --> C[Derived lineage]
-    C --> D[Knowledge graph]
-    D --> E[Expected relationships]
-```
-
-remain consistent and verifiable.
-
-The goal is not merely to generate lineage.
-
-The goal is to generate lineage that can be trusted.
+- [Developer path](https://flowdigger.github.io/role-paths/developer/) and
+  [evidence model](https://flowdigger.github.io/core-concepts/evidence-model/):
+  concepts and extension points.
+- [Nine pipeline phases](https://flowdigger.github.io/adr/0007-explicit-pipeline-phases/):
+  parse, observe, derive, validate, merge, stitch and publish.
+- [XIR quick reference](https://github.com/jurgenei/jurgenei/blob/main/xir-starter-kit/spec/XIR-QUICK-REFERENCE.md)
+  and [language definition](https://github.com/jurgenei/jurgenei/blob/main/xir-starter-kit/spec/XIR-LANGUAGE.md):
+  notation and full specification.
+- [System knowledge learning series](https://flowdigger.github.io/learn/system-knowledge/):
+  evidence, reproducibility, merge, stitch, provenance and projections.

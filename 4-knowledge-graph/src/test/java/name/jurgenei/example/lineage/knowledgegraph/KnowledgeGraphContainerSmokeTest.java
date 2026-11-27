@@ -10,16 +10,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.Neo4jContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.neo4j.Neo4jContainer;
 
 @SpringBootTest
 @Testcontainers(disabledWithoutDocker = true)
 class KnowledgeGraphContainerSmokeTest {
 
     @Container
-    static final Neo4jContainer<?> NEO4J = new Neo4jContainer<>("neo4j:5.26.29");
+    static final Neo4jContainer NEO4J = new Neo4jContainer("neo4j:5.26.29");
 
     @DynamicPropertySource
     static void configureNeo4j(DynamicPropertyRegistry registry) {

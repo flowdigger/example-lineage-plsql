@@ -22,10 +22,11 @@ class GrowthEndToEndGraphVerificationContractTest {
     }
 
     @Test
-    void shouldRequirePassStatusInRootGraphVerification() throws Exception {
+    void shouldRequirePassStatusInGraphVerification() throws Exception {
         Path root = ProjectRootPaths.root();
         String rootBuild = Files.readString(root.resolve("build.gradle"), StandardCharsets.UTF_8);
-        assertThat(rootBuild).contains("verificationJson.contains('\"status\": \"pass\"')");
-        assertThat(rootBuild).contains("tasks.register('endToEndTest')");
+        String graphBuild = Files.readString(root.resolve(Path.of("4-knowledge-graph", "build.gradle")), StandardCharsets.UTF_8);
+        assertThat(graphBuild).contains("knowledgeGraphReport.text.contains('\"status\": \"pass\"')");
+        assertThat(rootBuild).contains("dependsOn(':knowledgeGraph:endToEndTest')");
     }
 }

@@ -1,4 +1,20 @@
 pluginManagement {
+    def archiPluginVersion = '1.0.0'
+    plugins {
+        id 'org.owasp.dependencycheck' version '13.0.0'
+        id 'com.github.spotbugs' version '6.5.15'
+        id 'org.flowdigger.gradle.archi' version archiPluginVersion
+        id 'org.flowdigger.antlr' version '1.0.3'
+        id 'org.flowdigger.antlr.plsql' version '1.0.1'
+        id 'org.flowdigger.xml' version '1.0.1'
+        id 'org.flowdigger.python' version '1.0.1'
+        id 'org.flowdigger.ooxml' version '1.0.1'
+        id 'org.flowdigger.lineage' version '1.0.2'
+        id 'name.jurgenei.gradle.archi' version '0.1.10'
+        id 'name.jurgenei.gradle.xml' version '0.1.15'
+        id 'org.springframework.boot' version '4.2.0'
+        id 'io.spring.dependency-management' version '1.1.7'
+    }
     repositories {
         gradlePluginPortal()
         mavenCentral()
@@ -6,12 +22,19 @@ pluginManagement {
     resolutionStrategy {
         eachPlugin {
             if (requested.id.id == 'org.flowdigger.gradle.archi') {
-                useModule("org.flowdigger.gradle:gradle-archi-plugin:${requested.version}")
+                // Settings plugin defaults are not present in requested.version here.
+                useModule("org.flowdigger.gradle:gradle-archi-plugin:${requested.version ?: archiPluginVersion}")
             }
         }
     }
     if (file('../gradle-lineage-plugin').isDirectory()) {
         includeBuild('../gradle-lineage-plugin')
+    }
+}
+
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
     }
 }
 

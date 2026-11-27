@@ -1,7 +1,7 @@
 plugins {
     id 'base'
-    id 'name.jurgenei.gradle.archi' version '0.1.10'
-    id 'name.jurgenei.gradle.xml' version '0.1.15'
+    id 'name.jurgenei.gradle.archi'
+    id 'name.jurgenei.gradle.xml'
 }
 
 group =  rootProject.group
@@ -49,6 +49,7 @@ tasks.register('assembleArchitectureModel') {
         if (!archimateInput.exists()) {
             throw new GradleException("ArchiMate model missing: ${archimateInput}")
         }
+
         if (!archiXmlOutput.get().asFile.exists()) {
             throw new GradleException("Archi XML export missing: ${archiXmlOutput.get().asFile}")
         }
@@ -62,5 +63,30 @@ tasks.register('assembleArchitectureModel') {
         if (pdfFiles.isEmpty()) {
             throw new GradleException("Archi PDF export missing in directory: ${pdfDir.get().asFile}")
         }
+    }
+}
+
+tasks.register('assembleArchitecture') {
+    group = 'lineage'
+    description = 'Assembles architecture artifacts and report.'
+    dependsOn('assembleArchitectureModel')
+    def reportsDir = rootProject.layout.buildDirectory.dir('reports')
+    def requireFiles = rootProject.ext.requireReportFiles
+    def writeReport = rootProject.ext.writeLifecycleReport
+    outputs.file(reportsDir.map { it.file('architecture-report.html') })
+    doLast {
+        def exportDir = archiExportDir.get().asFile
+        def exportedPdfDir = new File(exportDir, 'pdf')
+        requireFiles([new File(exportDir, 'test-lineage.xir'), new File(exportDir, 'test-lineage.xlsx')])
+        def pdfFiles = (exportedPdfDir.listFiles() ?: [] as File[]).findAll { it.isFile() && it.name.endsWith('.pdf') }
+        if (pdfFiles.isEmpty()) {
+            throw new GradleException("Required PDF exports missing: ${exportedPdfDir}")
+        }
+        writeReport('architecture-report.html', 'Architecture Report', [
+                "source=${exportDir}",
+                "xmlExport=test-lineage.xml",
+                "xlsxExport=test-lineage.xlsx",
+                "pdfExports=${pdfFiles.collect { it.name }.join(',')}"
+        ])
     }
 }

@@ -1,7 +1,7 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '4.2.0'
-    id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.springframework.boot'
+    id 'io.spring.dependency-management'
 }
 
 group =  rootProject.group
@@ -14,10 +14,6 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
-}
-
-repositories {
-    mavenCentral()
 }
 
 dependencies {
@@ -73,4 +69,86 @@ tasks.register('verifyKnowledgeGraphModel', JavaExec) {
     mainClass = 'name.jurgenei.example.lineage.knowledgegraph.KnowledgeGraphFlowRunner'
     args = ['verify', reportDir.get().asFile.absolutePath]
     outputs.file(reportDir.map { it.file('verification-report.json') })
+}
+
+def reportsDir = rootProject.layout.buildDirectory.dir('reports')
+def requireFiles = rootProject.ext.requireReportFiles
+def writeReport = rootProject.ext.writeLifecycleReport
+
+tasks.register('startKnowledgeGraph') {
+    group = 'lineage'
+    description = 'Prepares knowledge graph runtime prerequisites.'
+    dependsOn('startKnowledgeGraphContainer')
+    outputs.file(reportsDir.map { it.file('knowledge-graph-start-report.html') })
+    doLast {
+        def moduleStartReport = reportDir.get().file('container-start-report.json').asFile
+        requireFiles([moduleStartReport])
+        writeReport('knowledge-graph-start-report.html', 'Knowledge Graph Start Report', [
+                "containerStartReport=${moduleStartReport}",
+                'status=ready-for-load'
+        ])
+    }
+}
+
+tasks.register('loadKnowledgeGraph') {
+    group = 'lineage'
+    description = 'Loads architecture and lineage artifacts into graph model.'
+    dependsOn(':architecture:assembleArchitecture', ':lineage:generateLineage', 'startKnowledgeGraph', 'loadKnowledgeGraphStubData')
+    outputs.file(reportsDir.map { it.file('graph-load-report.html') })
+    doLast {
+        def architectureReport = reportsDir.get().file('architecture-report.html').asFile
+        def lineageReport = reportsDir.get().file('lineage-report.html').asFile
+        def knowledgeGraphStartReport = reportsDir.get().file('knowledge-graph-start-report.html').asFile
+        def knowledgeGraphLoadReport = reportDir.get().file('load-report.json').asFile
+        requireFiles([architectureReport, lineageReport, knowledgeGraphStartReport, knowledgeGraphLoadReport])
+        writeReport('graph-load-report.html', 'Graph Load Report', [
+                "architectureReport=${architectureReport.name}",
+                "lineageReport=${lineageReport.name}",
+                "knowledgeGraphStartReport=${knowledgeGraphStartReport.name}",
+                "knowledgeGraphLoadReport=${knowledgeGraphLoadReport}",
+                "status=loaded"
+        ])
+    }
+}
+
+tasks.register('verifyKnowledgeGraph') {
+    group = 'verification'
+    description = 'Runs graph verification checks.'
+    dependsOn('loadKnowledgeGraph', 'verifyKnowledgeGraphModel')
+    outputs.file(reportsDir.map { it.file('graph-report.html') })
+    doLast {
+        def graphLoadReport = reportsDir.get().file('graph-load-report.html').asFile
+        def knowledgeGraphReport = reportDir.get().file('verification-report.json').asFile
+        def knowledgeGraphDump = reportDir.get().file('graph-dump.json').asFile
+        requireFiles([graphLoadReport, knowledgeGraphReport, knowledgeGraphDump])
+        if (!knowledgeGraphReport.text.contains('"status": "pass"')) {
+            throw new GradleException("Knowledge graph verification report does not indicate pass: ${knowledgeGraphReport}")
+        }
+        writeReport('graph-report.html', 'Graph Verification Report', [
+                "graphLoadReport=${graphLoadReport.name}",
+                "knowledgeGraphVerification=${knowledgeGraphReport}",
+                "knowledgeGraphDump=${knowledgeGraphDump}",
+                "checks=expected-vertices,expected-relationships,table-lineage",
+                "status=pass"
+        ])
+    }
+}
+
+tasks.register('endToEndTest') {
+    group = 'verification'
+    description = 'Executes full architecture-to-lineage-to-graph scenario.'
+    dependsOn('verifyKnowledgeGraph')
+    outputs.file(reportsDir.map { it.file('end-to-end-report.html') })
+    doLast {
+        def architectureReport = reportsDir.get().file('architecture-report.html').asFile
+        def lineageReport = reportsDir.get().file('lineage-report.html').asFile
+        def graphReport = reportsDir.get().file('graph-report.html').asFile
+        requireFiles([architectureReport, lineageReport, graphReport])
+        writeReport('end-to-end-report.html', 'End-to-End Report', [
+                "step1=${architectureReport.name}",
+                "step2=${lineageReport.name}",
+                "step3=${graphReport.name}",
+                "status=complete"
+        ])
+    }
 }

@@ -1,94 +1,86 @@
 plugins {
     id 'base'
-    id 'name.jurgenei.gradle.xml' version '0.1.15'
-    id 'name.jurgenei.gradle.antlr.plsql' version '0.1.8'
 }
 
-group =  rootProject.group
+group = rootProject.group
 version = rootProject.version
 
-import org.flowdigger.gradle.antlr.XmlAstPlsqlGradleTask
-import org.flowdigger.gradle.xml.XsltTask
-
-def configureParTask = { Object t ->
-    t.executionModel.set('VIRTUAL_THREADS')
-    t.parallelism.set(3)  // Up to 100 concurrent tasks
-    t.aggressiveGc.set(true)
-    t.gcEveryFiles.set(20)
-    t.gcHeapThresholdPercent.set(80)
-    t.targetExtension.set('.xir')
-    t.outputFormat.set('beautified')
-    t.continueOnError.set(true)
-}
-
-def configureXmlAstTask = { Object t, String sourcePath, String outputDirName, String taskDescription ->
-    t.group = 'verification'
-    t.description = taskDescription
-    t.compression = true
-    t.sourceDirectory.set(file(sourcePath))
-    t.destinationDirectory.set(file(outputDirName))
-
-
-    t.continueOnError.set(true)
-    t.failOnError.set(false)
-    t.failOnTransformationError.set(false)
-    t.force.set(false)
-    t.suppressStackTrace.set(true)
-    t.doFirst {
-        // Capture standard error at WARN level so critical messages always appear
-        logging.captureStandardError(LogLevel.INFO)
-        // Log conversion start at lifecycle level (always visible in normal builds)
-        t.logger.lifecycle("Starting XML AST conversion for ${sourcePath} -> ${outputDirName}")
-    }
-    t.doLast {
-        // Log conversion completion at lifecycle level (always visible)
-        t.logger.lifecycle("Completed XML AST conversion for ${outputDirName}")
-    }
-}
-
-def ddlDir = project(':application').layout.buildDirectory.dir('ddl').get().toString()
-def astDir = layout.buildDirectory.dir('ast').get().toString()
-def extractDir = layout.buildDirectory.dir('extract').get().toString()
-
-tasks.register('ast', XmlAstPlsqlGradleTask) { it ->
-    dependsOn(':application:extractOracleSchemaDdl')
-    configureXmlAstTask(it, ddlDir, astDir,
-            'Parses benchmark SQL samples parallel.')
-    configureParTask(it)
-    it.includes.set(["*/{view,procedure}/**.sql"])
-}
-
-tasks.register('extract', XsltTask) {
-    dependsOn('ast')
-    style 'src/main/xsl/extract.xsl'
-    source(fileTree(astDir) {
-        include '**/*.xir'
-    })
-    outputExtension.set('.xir')
-    xirFormat.set('beautified')
-    outputDir.set(file(extractDir))
-    // workers.set(4)
-}
-
-
-
-
+def lineageBuildRoot = rootProject.file(providers.gradleProperty('buildRoot')
+        .orElse(providers.environmentVariable('LINEAGE_BUILD_ROOT'))
+        .orElse(rootProject.layout.buildDirectory.dir('lineage-uniform').map { it.asFile.absolutePath })
+        .get())
+def reportsDir = rootProject.layout.buildDirectory.dir('reports')
+def requireFiles = rootProject.ext.requireReportFiles
+def writeReport = rootProject.ext.writeLifecycleReport
 
 tasks.register('generateTableLineage') {
     group = 'lineage'
-    description = 'Generates AST, flow graphs, table lineage, and cypher artifacts.'
-    dependsOn(':application:prepareApplicationAssets')
-    dependsOn('extract')
+    description = 'Generates and publishes canonical table lineage.'
+    dependsOn(':publishLineage')
+}
 
-//    outputs.dir(lineageDir)
+tasks.register('generateLineage') {
+    group = 'lineage'
+    description = 'Generates lineage artifacts from application sources.'
+    dependsOn(':application:prepareApplicationAssets', ':architecture:assembleArchitectureModel', ':publishLineage')
 
-//   def archDir = project(':architecture').layout.buildDirectory.dir('archi-export').get().asFile
-//    doLast {
-//        def dir = outputDir.get().asFile
-//        dir.mkdirs()
-//        new File(dir, 'asts.xml').text = '<ast source="load_customer_lineage.sql"/>'
-//        new File(dir, 'flowgraphs.json').text = '{"flows":["RAW_CUSTOMER->VALID_CUSTOMER","VALID_CUSTOMER->MERGED_CUSTOMER"]}'
-//        new File(dir, 'table-lineage.csv').text = 'source,target\nCUSTOMER_REFERENCE,VALID_CUSTOMER\nRAW_CUSTOMER,VALID_CUSTOMER\nVALID_CUSTOMER,MERGED_CUSTOMER\n'
-//        new File(dir, 'lineage.cypher').text = 'MERGE (a:Table {name:"RAW_CUSTOMER"}) MERGE (b:Table {name:"VALID_CUSTOMER"}) MERGE (a)-[:WRITES_TO]->(b);'
-//    }
+    def appDir = project(':application').layout.buildDirectory.dir('plsql-assets').get().asFile
+    def lineageAstDir = new File(lineageBuildRoot, '1.parse/sql/application/ast')
+    def lineageExtractDir = new File(lineageBuildRoot, '2.observe/sql/application')
+    def publishedGraph = new File(lineageBuildRoot, '9.publish/artifacts/graphml/lineage.graphml')
+    inputs.file(new File(appDir, 'application-assets.txt'))
+    inputs.dir(lineageAstDir)
+    inputs.dir(lineageExtractDir)
+    inputs.file(publishedGraph)
+    inputs.property('lineageBuildRoot', lineageBuildRoot.absolutePath)
+    outputs.file(reportsDir.map { it.file('lineage-report.html') })
+    doLast {
+        requireFiles([new File(appDir, 'application-assets.txt'), publishedGraph])
+        if (fileTree(lineageAstDir).matching { include '**/*.xir' }.isEmpty()
+                || fileTree(lineageExtractDir).matching { include '**/*.xir' }.isEmpty()) {
+            throw new GradleException("Lineage outputs missing or empty. Expected XIR files in: ${lineageAstDir}, ${lineageExtractDir}")
+        }
+        writeReport('lineage-report.html', 'Lineage Report', [
+                "applicationAssets=${appDir}",
+                "lineageAstDir=${lineageAstDir}",
+                "lineageExtractDir=${lineageExtractDir}",
+                "mode=gradle-lineage-plugin"
+        ])
+    }
+}
+
+tasks.register('verifyExampleLineage') {
+    group = 'verification'
+    description = 'Verifies published lineage for the example customer procedure.'
+    dependsOn(':publishLineage')
+    doLast {
+        def astDir = new File(lineageBuildRoot, '1.parse/sql/application/ast')
+        def observationsDir = new File(lineageBuildRoot, '2.observe/sql/application')
+        def ast = fileTree(astDir).matching { include '**/procedure/load_customer_lineage.xir' }.files
+        def observations = fileTree(observationsDir).matching { include '**/procedure/load_customer_lineage.xir' }.files
+        if (ast.size() != 1 || observations.size() != 1) {
+            throw new GradleException('Expected exactly one AST and observation for load_customer_lineage.')
+        }
+        def observation = observations.first().text
+        if (!observation.contains('name "load_customer_lineage"')
+                || !observation.contains('name "raw_customer"')
+                || !observation.contains('name "valid_customer"')
+                || !observation.contains('name "merged_customer"')) {
+            throw new GradleException('Customer procedure observation is incomplete.')
+        }
+
+        def graphFile = new File(lineageBuildRoot, '9.publish/artifacts/graphml/lineage.graphml')
+        requireFiles([graphFile])
+        def graph = new groovy.xml.XmlSlurper().parse(graphFile)
+        def edges = graph.depthFirst().findAll { it.name() == 'edge' }
+                .collect { [it.@source.text(), it.@target.text()] } as Set
+        def expected = [
+                ['dsa.raw_customer', 'dsa.valid_customer'],
+                ['dsa.customer_reference', 'dsa.valid_customer'],
+                ['dsa.valid_customer', 'dsa.merged_customer']
+        ]
+        if (!edges.containsAll(expected)) {
+            throw new GradleException("Published customer lineage is incomplete. Expected ${expected}, found ${edges}.")
+        }
+    }
 }

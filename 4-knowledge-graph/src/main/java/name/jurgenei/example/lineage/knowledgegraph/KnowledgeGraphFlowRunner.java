@@ -9,7 +9,7 @@ import java.util.Set;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.testcontainers.containers.Neo4jContainer;
+import org.testcontainers.neo4j.Neo4jContainer;
 
 public final class KnowledgeGraphFlowRunner {
 
@@ -20,7 +20,7 @@ public final class KnowledgeGraphFlowRunner {
         String action = args.length > 0 ? args[0].trim().toLowerCase() : "verify";
         Path outputDir = args.length > 1 ? Path.of(args[1]) : Path.of("build/graph-report");
 
-        try (Neo4jContainer<?> neo4j = new Neo4jContainer<>("neo4j:5.26.29")) {
+        try (Neo4jContainer neo4j = new Neo4jContainer("neo4j:5.26.29")) {
             neo4j.start();
             writeContainerStartReport(outputDir.resolve("container-start-report.json"), neo4j);
 
@@ -60,7 +60,7 @@ public final class KnowledgeGraphFlowRunner {
         }
     }
 
-    private static void writeContainerStartReport(Path outputFile, Neo4jContainer<?> neo4j) {
+    private static void writeContainerStartReport(Path outputFile, Neo4jContainer neo4j) {
         String content = """
                 {
                   "status": "started",
