@@ -20,7 +20,7 @@ public final class KnowledgeGraphFlowRunner {
         String action = args.length > 0 ? args[0].trim().toLowerCase() : "verify";
         Path outputDir = args.length > 1 ? Path.of(args[1]) : Path.of("build/graph-report");
 
-        try (Neo4jContainer<?> neo4j = new Neo4jContainer<>("neo4j:5.23.0")) {
+        try (Neo4jContainer<?> neo4j = new Neo4jContainer<>("neo4j:5.26.29")) {
             neo4j.start();
             writeContainerStartReport(outputDir.resolve("container-start-report.json"), neo4j);
 

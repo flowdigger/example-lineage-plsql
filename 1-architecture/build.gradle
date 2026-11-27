@@ -20,6 +20,8 @@ archi {
     env 'ARCHI_FILE', archimateInput
     env 'PACKAGE_NAME', 'test-lineage'
     env 'EXPORT_DIR', archiExportDir.get().asFile
+    env 'ARCHI_RELEASE_TAG', '5_12'
+    env 'ARCHI_VERSION', '5.12.0'
 }
 
 tasks.register('transformArchiModel', org.flowdigger.gradle.xml.XsltTask) {
