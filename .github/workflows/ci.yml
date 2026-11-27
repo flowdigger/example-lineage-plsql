@@ -25,6 +25,7 @@ jobs:
       - name: Run structure and contract tests
         run: >
           ./gradlew --no-daemon :application:test
+          --tests name.jurgenei.example.lineage.BuildDirectoryLayoutTest
           --tests name.jurgenei.example.lineage.GrowthStructureBootstrapTest
           --tests name.jurgenei.example.lineage.GrowthCrossModuleContractTest
           --tests name.jurgenei.example.lineage.GrowthEndToEndGraphVerificationContractTest
@@ -35,8 +36,8 @@ jobs:
         with:
           name: structure-contract-test-reports
           path: |
-            2-application/build/reports/tests/test/**
-            2-application/build/test-results/test/**
+            build/projects/application/reports/tests/test/**
+            build/projects/application/test-results/test/**
 
   lineage-tests:
     runs-on: ubuntu-latest
@@ -70,8 +71,10 @@ jobs:
         with:
           name: lineage-artifacts
           path: |
-            2-application/build/plsql-assets/**
-            3-lineage/build/lineage/**
+            build/projects/application/plsql-assets/**
+            build/projects/lineage/ast/**
+            build/projects/lineage/extract/**
+            build/lineage-uniform/**
             build/reports/lineage-report.html
 
   graph-tests:
@@ -111,8 +114,8 @@ jobs:
         with:
           name: graph-artifacts
           path: |
-            1-architecture/build/archi-export/**
-            4-knowledge-graph/build/graph-report/**
+            build/projects/architecture/archi-export/**
+            build/projects/knowledgeGraph/graph-report/**
             build/reports/graph-load-report.html
             build/reports/graph-report.html
 
@@ -152,5 +155,5 @@ jobs:
           name: end-to-end-artifacts
           path: |
             build/reports/end-to-end-report.html
-            2-application/build/reports/tests/test/**
-            2-application/build/test-results/test/**
+            build/projects/application/reports/tests/test/**
+            build/projects/application/test-results/test/**

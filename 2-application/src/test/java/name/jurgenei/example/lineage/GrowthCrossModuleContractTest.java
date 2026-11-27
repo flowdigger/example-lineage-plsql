@@ -14,8 +14,8 @@ class GrowthCrossModuleContractTest {
         Path root = ProjectRootPaths.root();
         String architectureBuild = Files.readString(root.resolve(Path.of("1-architecture", "build.gradle")), StandardCharsets.UTF_8);
         assertThat(architectureBuild).contains("assembleArchitectureModel");
-        assertThat(architectureBuild).contains("name.jurgenei.gradle.archi");
-        assertThat(architectureBuild).contains("name.jurgenei.gradle.xml");
+        assertThat(architectureBuild).contains("org.flowdigger.gradle.archi");
+        assertThat(architectureBuild).contains("org.flowdigger.xml");
         assertThat(architectureBuild).contains("test-lineage.export.xml");
         assertThat(architectureBuild).contains("test-lineage.xir");
         assertThat(architectureBuild).contains("xirFormat.set(\"beautified\")");
@@ -33,14 +33,12 @@ class GrowthCrossModuleContractTest {
         assertThat(applicationBuild).contains("application-assets.txt");
         assertThat(lineageBuild).contains("dependsOn(':application:prepareApplicationAssets')");
         assertThat(lineageBuild).contains("targetExtension.set('.xir')");
+        assertThat(lineageBuild).contains("outputFormat.set('beautified')");
         assertThat(lineageBuild).contains("xirFormat.set('beautified')");
         assertThat(lineageBuild).contains("include '**/*.xir'");
         assertThat(lineageBuild).contains("outputExtension.set('.xir')");
-        assertThat(rootBuild).contains("id 'name.jurgenei.gradle.xml' version '0.1.13'");
-        assertThat(lineageBuild).contains("asts.xml");
-        assertThat(lineageBuild).contains("flowgraphs.json");
-        assertThat(lineageBuild).contains("table-lineage.csv");
-        assertThat(lineageBuild).contains("lineage.cypher");
+        assertThat(rootBuild).contains("id 'org.flowdigger.xml' version '1.0.1'");
+        assertThat(rootBuild).contains("dependsOn(':application:prepareApplicationAssets', ':architecture:assembleArchitectureModel', 'publishLineage')");
     }
 
     @Test

@@ -49,8 +49,8 @@ jobs:
         with:
           name: dependency-check-html
           path: |
-            2-application/build/reports/dependency-check-report.html
-            4-knowledge-graph/build/reports/dependency-check-report.html
+            build/projects/application/reports/dependency-check-report.html
+            build/projects/knowledgeGraph/reports/dependency-check-report.html
 
       - name: Upload Dependency-Check XML reports
         if: always()
@@ -58,8 +58,8 @@ jobs:
         with:
           name: dependency-check-xml
           path: |
-            2-application/build/reports/dependency-check-report.xml
-            4-knowledge-graph/build/reports/dependency-check-report.xml
+            build/projects/application/reports/dependency-check-report.xml
+            build/projects/knowledgeGraph/reports/dependency-check-report.xml
 
       - name: Upload Dependency-Check JSON reports
         if: always()
@@ -67,14 +67,14 @@ jobs:
         with:
           name: dependency-check-json
           path: |
-            2-application/build/reports/dependency-check-report.json
-            4-knowledge-graph/build/reports/dependency-check-report.json
+            build/projects/application/reports/dependency-check-report.json
+            build/projects/knowledgeGraph/reports/dependency-check-report.json
 
       - name: Dependency-Check summary
         if: always()
         run: |
           SUPPRESSION_RULES=$(grep -c "<suppress " dependency-check-suppressions.xml || true)
-          SUPPRESSED_FINDINGS=$(grep -Rho "<suppressed>true</suppressed>" 2-application/build/reports/dependency-check-report.xml 4-knowledge-graph/build/reports/dependency-check-report.xml 2>/dev/null | wc -l | tr -d ' ')
+          SUPPRESSED_FINDINGS=$(grep -Rho "<suppressed>true</suppressed>" build/projects/application/reports/dependency-check-report.xml build/projects/knowledgeGraph/reports/dependency-check-report.xml 2>/dev/null | wc -l | tr -d ' ')
           SUPPRESSION_SHA=$(sha256sum dependency-check-suppressions.xml | awk '{print $1}')
           echo "### OWASP Dependency-Check" >> "$GITHUB_STEP_SUMMARY"
           echo "- Reports uploaded as workflow artifacts." >> "$GITHUB_STEP_SUMMARY"

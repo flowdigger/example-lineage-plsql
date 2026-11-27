@@ -17,7 +17,7 @@ def configureParTask = { Object t ->
     t.gcEveryFiles.set(20)
     t.gcHeapThresholdPercent.set(80)
     t.targetExtension.set('.xir')
-    t.xirFormat.set('beautified')
+    t.outputFormat.set('beautified')
     t.continueOnError.set(true)
 }
 

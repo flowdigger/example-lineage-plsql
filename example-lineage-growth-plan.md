@@ -251,7 +251,7 @@ scripts/verify-knowledge-graph.sh
 All scripts call Gradle tasks (source-of-truth) and generate artifacts under:
 
 ```text
-4-knowledge-graph/build/graph-report/
+build/projects/knowledgeGraph/graph-report/
 ```
 
 ---

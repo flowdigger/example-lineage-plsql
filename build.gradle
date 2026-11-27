@@ -24,6 +24,10 @@ allprojects {
     }
 }
 
+subprojects {
+    layout.buildDirectory.set(rootProject.layout.buildDirectory.dir("projects/${project.path.substring(1).replace(':', '/')}"))
+}
+
 def gLineageSourceRoot = layout.buildDirectory.dir('lineage-source').get().asFile
 def gLineageBuildRoot = layout.buildDirectory.dir('lineage-uniform').get().asFile
 def gLineageRepoName = 'example-lineage-plsql'

@@ -44,5 +44,5 @@ jobs:
         with:
           name: spotbugs-html
           path: |
-            2-application/build/reports/spotbugs/main.html
-            4-knowledge-graph/build/reports/spotbugs/main.html
+            build/projects/application/reports/spotbugs/main.html
+            build/projects/knowledgeGraph/reports/spotbugs/main.html

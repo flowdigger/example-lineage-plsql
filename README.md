@@ -250,6 +250,11 @@ The project grows incrementally from structure validation toward full end-to-end
 
 # Generated Reports
 
+All Gradle build outputs are under the root `build/` directory. Subproject
+outputs are isolated under `build/projects/<project-name>/` (for example,
+`build/projects/application/`); root task outputs remain directly under `build/`.
+Running `./gradlew clean` removes both root and subproject outputs.
+
 ## Root Reports
 
 ```mermaid
@@ -267,7 +272,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    G[4-knowledge-graph/build/graph-report]
+    G[build/projects/knowledgeGraph/graph-report]
     G --> G1[container-start-report.json]
     G --> G2[load-report.json]
     G --> G3[graph-dump.json]
