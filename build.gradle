@@ -1,7 +1,7 @@
 plugins {
     id 'base'
     id 'org.owasp.dependencycheck' version '13.0.0' apply false
-    id 'com.github.spotbugs' version '6.5.12' apply false
+    id 'com.github.spotbugs' version '6.5.15' apply false
 
     // Data lineage plugin publishing
     id 'org.flowdigger.gradle.archi' version '1.0.0' apply false
@@ -110,8 +110,8 @@ subprojects {
                     .map { it.toBoolean() }
                     .orElse(true)
                     .get()
-            effort = 'default'
-            reportLevel = 'medium'
+            effort = com.github.spotbugs.snom.Effort.DEFAULT
+            reportLevel = com.github.spotbugs.snom.Confidence.valueOf('MEDIUM')
             excludeFilter = rootProject.file('spotbugs-exclude.xml')
             reports.create('html') {
                 required = true
