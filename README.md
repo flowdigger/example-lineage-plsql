@@ -322,6 +322,11 @@ Run module-isolated metadata API and graph tests:
 ./gradlew :knowledgeGraph:test
 ```
 
+Application and knowledge graph tests use Mockito's subclass mock maker to avoid
+runtime agent attachment. It cannot mock final classes or methods, or static
+methods; tests requiring inline mocking must explicitly enable Mockito's inline
+mock maker.
+
 ---
 
 # Design Principles
