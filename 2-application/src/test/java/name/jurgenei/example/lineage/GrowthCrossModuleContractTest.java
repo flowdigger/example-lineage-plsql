@@ -14,8 +14,8 @@ class GrowthCrossModuleContractTest {
         Path root = ProjectRootPaths.root();
         String architectureBuild = Files.readString(root.resolve(Path.of("1-architecture", "build.gradle")), StandardCharsets.UTF_8);
         assertThat(architectureBuild).contains("assembleArchitectureModel");
-        assertThat(architectureBuild).contains("org.flowdigger.gradle.archi");
-        assertThat(architectureBuild).contains("org.flowdigger.xml");
+        assertThat(architectureBuild).contains("name.jurgenei.gradle.archi");
+        assertThat(architectureBuild).contains("name.jurgenei.gradle.xml");
         assertThat(architectureBuild).contains("test-lineage.export.xml");
         assertThat(architectureBuild).contains("test-lineage.xir");
         assertThat(architectureBuild).contains("xirFormat.set(\"beautified\")");
