@@ -12,6 +12,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Checkout lineage build logic
+        run: bash .github/scripts/checkout-lineage-build-logic.sh
+
       - name: Set up Java 21
         uses: actions/setup-java@v6
         with:
@@ -31,14 +34,13 @@ jobs:
         with:
           name: coverage-reports
           path: |
-            2-application/build/reports/jacoco/test/**
-            2-application/build/reports/tests/test/**
-            2-application/build/test-results/test/**
+            build/projects/application/reports/jacoco/test/**
+            build/projects/application/reports/tests/test/**
+            build/projects/application/test-results/test/**
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
-          files: ./2-application/build/reports/jacoco/test/jacocoTestReport.xml
+          files: ./build/projects/application/reports/jacoco/test/jacocoTestReport.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: jurgenei/example-lineage-plsql
-

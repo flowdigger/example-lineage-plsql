@@ -19,7 +19,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class KnowledgeGraphContainerSmokeTest {
 
     @Container
-    static final Neo4jContainer<?> NEO4J = new Neo4jContainer<>("neo4j:5.23.0");
+    static final Neo4jContainer<?> NEO4J = new Neo4jContainer<>("neo4j:5.26.29");
 
     @DynamicPropertySource
     static void configureNeo4j(DynamicPropertyRegistry registry) {

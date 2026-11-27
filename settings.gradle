@@ -1,3 +1,20 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == 'org.flowdigger.gradle.archi') {
+                useModule("org.flowdigger.gradle:gradle-archi-plugin:${requested.version}")
+            }
+        }
+    }
+    if (file('../gradle-lineage-plugin').isDirectory()) {
+        includeBuild('../gradle-lineage-plugin')
+    }
+}
+
 rootProject.name = 'example-lineage-plsql'
 
 include 'architecture'

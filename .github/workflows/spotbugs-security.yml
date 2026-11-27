@@ -18,6 +18,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Checkout lineage build logic
+        run: bash .github/scripts/checkout-lineage-build-logic.sh
+
       - name: Setup Java 21
         uses: actions/setup-java@v6
         with:
@@ -44,5 +47,5 @@ jobs:
         with:
           name: spotbugs-html
           path: |
-            2-application/build/reports/spotbugs/main.html
-            4-knowledge-graph/build/reports/spotbugs/main.html
+            build/projects/application/reports/spotbugs/main.html
+            build/projects/knowledgeGraph/reports/spotbugs/main.html

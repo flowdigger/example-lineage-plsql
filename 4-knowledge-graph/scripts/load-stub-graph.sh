@@ -6,4 +6,4 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$PROJECT_ROOT"
 ./gradlew --no-daemon :knowledgeGraph:loadKnowledgeGraphStubData
-echo "Stub load report: $PROJECT_ROOT/4-knowledge-graph/build/graph-report/load-report.json"
+echo "Stub load report: $PROJECT_ROOT/build/projects/knowledgeGraph/graph-report/load-report.json"

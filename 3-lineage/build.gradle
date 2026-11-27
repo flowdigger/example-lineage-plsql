@@ -7,8 +7,8 @@ plugins {
 group =  rootProject.group
 version = rootProject.version
 
-import name.jurgenei.gradle.antlr.XmlAstPlsqlGradleTask
-import name.jurgenei.gradle.xml.XsltTask
+import org.flowdigger.gradle.antlr.XmlAstPlsqlGradleTask
+import org.flowdigger.gradle.xml.XsltTask
 
 def configureParTask = { Object t ->
     t.executionModel.set('VIRTUAL_THREADS')
@@ -16,8 +16,8 @@ def configureParTask = { Object t ->
     t.aggressiveGc.set(true)
     t.gcEveryFiles.set(20)
     t.gcHeapThresholdPercent.set(80)
-    t.targetExtension.set('.sexpr')
-    t.sexprFormat.set('beautified')
+    t.targetExtension.set('.xir')
+    t.outputFormat.set('beautified')
     t.continueOnError.set(true)
 }
 
@@ -62,10 +62,10 @@ tasks.register('extract', XsltTask) {
     dependsOn('ast')
     style 'src/main/xsl/extract.xsl'
     source(fileTree(astDir) {
-        include '**/*.sexpr'
+        include '**/*.xir'
     })
-    outputExtension.set('.sexpr')
-    sexprFormat.set('beautified')
+    outputExtension.set('.xir')
+    xirFormat.set('beautified')
     outputDir.set(file(extractDir))
     // workers.set(4)
 }
