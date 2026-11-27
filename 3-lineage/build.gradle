@@ -1,7 +1,7 @@
 plugins {
     id 'base'
-    id 'org.flowdigger.antlr.plsql'
-    id 'org.flowdigger.xml'
+    id 'name.jurgenei.gradle.xml' version '0.1.15'
+    id 'name.jurgenei.gradle.antlr.plsql' version '0.1.8'
 }
 
 group =  rootProject.group
