@@ -203,11 +203,41 @@ Or execute stages individually:
 ```bash
 ./gradlew assembleArchitecture
 ./gradlew generateLineage
+./gradlew verifyExampleLineage
 ./gradlew startKnowledgeGraph
 ./gradlew loadKnowledgeGraph
 ./gradlew verifyKnowledgeGraph
 ./gradlew endToEndTest
 ```
+
+`generateLineage` and `:lineage:generateTableLineage` use the same
+root-applied `org.flowdigger.lineage` pipeline. It extracts DDL from the
+Liquibase changelogs, parses PL/SQL, derives and validates flows, and publishes
+lineage. `verifyExampleLineage` checks the customer procedure and its expected
+table relationships in the published GraphML. Knowledge graph loading currently
+uses stub data, not these published artifacts.
+
+Example-specific pipeline configuration lives in
+`3-lineage/lineage-pipeline.gradle`, applied during root evaluation because
+the plugin requires root-project application. Lineage reporting and verification
+tasks live in `3-lineage/build.gradle`; root `generateLineage` and
+`verifyExampleLineage` delegate to those tasks.
+
+The pipeline syncs the configured `main` branch of
+`flowdigger/example-lineage-plsql` into `build/lineage-source/` and reads the
+locally generated DDL from `build/projects/application/ddl/`. Network access,
+Git, and the Archi runtime are required. The sibling `gradle-lineage-plugin`
+checkout is used when present; CI checks out pinned build logic.
+Plugin version defaults and project dependency repositories are configured in
+`settings.gradle`. Plugin declarations remain in project build files.
+
+Canonical outputs default to `build/lineage-uniform/`: parsed AST XIR files in
+`1.parse/sql/application/ast/`, semantic observations in
+`2.observe/sql/application/`, and GraphML, RDF, JSON, and per-processor XIR
+under `9.publish/artifacts/`. `-PbuildRoot=<path>` or `LINEAGE_BUILD_ROOT`
+overrides that directory. The old `:lineage:ast` and `:lineage:extract` tasks,
+their custom extraction format, and `build/projects/lineage/{ast,extract}/`
+outputs are no longer provided.
 
 Expected outcome:
 

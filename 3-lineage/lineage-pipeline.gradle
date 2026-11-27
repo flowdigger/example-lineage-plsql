@@ -1,0 +1,46 @@
+def lineageSourceRoot = layout.buildDirectory.dir('lineage-source').get().asFile
+def lineageBuildRoot = file(providers.gradleProperty('buildRoot')
+        .orElse(providers.environmentVariable('LINEAGE_BUILD_ROOT'))
+        .orElse(layout.buildDirectory.dir('lineage-uniform').map { it.asFile.absolutePath })
+        .get())
+def lineageRepoDir = new File(lineageSourceRoot, 'example-lineage-plsql')
+def ddlDirectory = project(':application').layout.buildDirectory.dir('ddl').get().asFile
+def lineageSourceDirectory = lineageRepoDir.toPath().relativize(ddlDirectory.toPath()).toString()
+def architectureModel = project(':architecture').layout.buildDirectory
+        .file('archi-export/test-lineage.export.xml').get().asFile
+
+lineagePipeline {
+    sourceRoot = lineageSourceRoot.absolutePath
+    buildRoot = lineageBuildRoot.absolutePath
+    architectureModelFile = architectureModel
+    architecture {
+        inputFormat.set('archimate-exchange')
+        dependsOn(':architecture:assembleArchitectureModel')
+    }
+    schemaNames = ['dsa']
+    schemaAliases = [demo_dsa_owner: 'dsa']
+    profiles {
+        profile('plsql') {
+            strategy.set('plsql')
+        }
+    }
+    repos {
+        repo {
+            uri.set('https://github.com/flowdigger/example-lineage-plsql')
+            ref.set('main')
+            sourceSet('application') {
+                parserPlugin.set('org.flowdigger.antlr.plsql')
+                profile.set('plsql')
+                sourceDirectory.set(lineageSourceDirectory)
+                schemas.set(['dsa'])
+                includes.set(['**/*.sql'])
+            }
+        }
+    }
+}
+
+afterEvaluate {
+    tasks.named('syncLineageRepos') {
+        dependsOn(':application:prepareApplicationAssets')
+    }
+}

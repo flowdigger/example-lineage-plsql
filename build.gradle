@@ -1,79 +1,28 @@
 plugins {
     id 'base'
-    id 'org.owasp.dependencycheck' version '13.0.0' apply false
-    id 'com.github.spotbugs' version '6.5.15' apply false
+    id 'org.owasp.dependencycheck' apply false
+    id 'com.github.spotbugs' apply false
 
     // Data lineage plugin publishing
-    id 'org.flowdigger.gradle.archi' version '1.0.0' apply false
+    id 'org.flowdigger.gradle.archi' apply false
 
     // Current lineage pipeline and parser plugins
-    id 'org.flowdigger.antlr' version '1.0.3' apply false
-    id 'org.flowdigger.antlr.plsql' version '1.0.1' apply false
-    id 'org.flowdigger.xml' version '1.0.1' apply false
-    id 'org.flowdigger.python' version '1.0.1' apply false
-    id 'org.flowdigger.ooxml' version '1.0.1' apply false
-    id 'org.flowdigger.lineage' version '1.0.2'
+    id 'org.flowdigger.antlr' apply false
+    id 'org.flowdigger.antlr.plsql' apply false
+    id 'org.flowdigger.xml' apply false
+    id 'org.flowdigger.python' apply false
+    id 'org.flowdigger.ooxml' apply false
+    id 'org.flowdigger.lineage'
 }
 
 version = '0.1.5'
 group = 'org.flowdigger.example.lineage.plsql'
 
-allprojects {
-    repositories {
-        mavenCentral()
-    }
-}
-
 subprojects {
     layout.buildDirectory.set(rootProject.layout.buildDirectory.dir("projects/${project.path.substring(1).replace(':', '/')}"))
 }
 
-def gLineageSourceRoot = layout.buildDirectory.dir('lineage-source').get().asFile
-def gLineageBuildRoot = layout.buildDirectory.dir('lineage-uniform').get().asFile
-def gLineageRepoName = 'example-lineage-plsql'
-def gLineageRepoDir = new File(gLineageSourceRoot, gLineageRepoName)
-def gLineageDdlDirectory = project(':application').layout.buildDirectory.dir('ddl').get().asFile
-def gLineageSourceDirectory = gLineageRepoDir.toPath()
-        .relativize(gLineageDdlDirectory.toPath())
-        .toString()
-def gArchitectureModelFile = project(':architecture').layout.buildDirectory
-        .file('archi-export/test-lineage.export.xml').get().asFile
-
-lineagePipeline {
-    sourceRoot = gLineageSourceRoot.absolutePath
-    buildRoot = gLineageBuildRoot.absolutePath
-    architectureModelFile = gArchitectureModelFile
-    architecture {
-        inputFormat.set('archimate-exchange')
-        dependsOn(':architecture:assembleArchitectureModel')
-    }
-    schemaNames = ['dsa']
-    schemaAliases = [demo_dsa_owner: 'dsa']
-    profiles {
-        profile('plsql') {
-            strategy.set('plsql')
-        }
-    }
-    repos {
-        repo {
-            uri.set('https://github.com/flowdigger/example-lineage-plsql')
-            ref.set('main')
-            sourceSet('application') {
-                parserPlugin.set('org.flowdigger.antlr.plsql')
-                profile.set('plsql')
-                sourceDirectory.set(gLineageSourceDirectory)
-                schemas.set(['dsa'])
-                includes.set(['**/*.sql'])
-            }
-        }
-    }
-}
-
-afterEvaluate {
-    tasks.named('syncLineageRepos') {
-        dependsOn(':application:prepareApplicationAssets')
-    }
-}
+apply from: '3-lineage/lineage-pipeline.gradle'
 
 subprojects {
     version = rootProject.version
@@ -125,7 +74,7 @@ subprojects {
 
 def reportsDir = layout.buildDirectory.dir('reports')
 
-def requireFiles = { List<File> files ->
+ext.requireReportFiles = { List<File> files ->
     files.each { file ->
         if (!file.exists()) {
             throw new GradleException("Required artifact missing: ${file}")
@@ -133,7 +82,7 @@ def requireFiles = { List<File> files ->
     }
 }
 
-def writeReport = { String fileName, String title, List<String> lines ->
+ext.writeLifecycleReport = { String fileName, String title, List<String> lines ->
     def target = reportsDir.get().file(fileName).asFile
     target.parentFile.mkdirs()
     target.text = """<html><head><title>${title}</title></head><body><h1>${title}</h1><ul>${lines.collect { "<li>${it}</li>" }.join('')}</ul></body></html>"""
@@ -142,128 +91,41 @@ def writeReport = { String fileName, String title, List<String> lines ->
 tasks.register('assembleArchitecture') {
     group = 'lineage'
     description = 'Assembles architecture artifacts from architecture project.'
-    dependsOn(':architecture:assembleArchitectureModel')
-    outputs.file(reportsDir.map { it.file('architecture-report.html') })
-    doLast {
-        def exportDir = project(':architecture').layout.buildDirectory.dir('archi-export').get().asFile
-        def pdfDir = new File(exportDir, 'pdf')
-        requireFiles([
-                new File(exportDir, 'test-lineage.xir'),
-                new File(exportDir, 'test-lineage.xlsx')
-        ])
-        def pdfFiles = (pdfDir.listFiles() ?: [] as File[]).findAll { it.isFile() && it.name.endsWith('.pdf') }
-        if (pdfFiles.isEmpty()) {
-            throw new GradleException("Required PDF exports missing: ${pdfDir}")
-        }
-        writeReport('architecture-report.html', 'Architecture Report', [
-                "source=${exportDir}",
-                "xmlExport=test-lineage.xml",
-                "xlsxExport=test-lineage.xlsx",
-                "pdfExports=${pdfFiles.collect { it.name }.join(',')}"
-        ])
-    }
+    dependsOn(':architecture:assembleArchitecture')
 }
 
 tasks.register('generateLineage') {
     group = 'lineage'
     description = 'Generates lineage artifacts from application sources.'
-    dependsOn(':application:prepareApplicationAssets', ':architecture:assembleArchitectureModel', 'publishLineage')
+    dependsOn(':lineage:generateLineage')
+}
 
-    outputs.file(reportsDir.map { it.file('lineage-report.html') })
-    doLast {
-        def appDir = project(':application').layout.buildDirectory.dir('plsql-assets').get().asFile
-        def lineageAstDir = new File(gLineageBuildRoot, '1.parse/sql/application/ast')
-        def lineageExtractDir = new File(gLineageBuildRoot, '2.observe/sql/application')
-        requireFiles([
-                new File(appDir, 'application-assets.txt')
-        ])
-        if (!lineageAstDir.exists() || !lineageExtractDir.exists()) {
-            throw new GradleException("Lineage outputs missing. Expected directories: ${lineageAstDir}, ${lineageExtractDir}")
-        }
-        writeReport('lineage-report.html', 'Lineage Report', [
-                "applicationAssets=${appDir}",
-                "lineageAstDir=${lineageAstDir}",
-                "lineageExtractDir=${lineageExtractDir}",
-                "mode=gradle-lineage-plugin"
-        ])
-    }
+tasks.register('verifyExampleLineage') {
+    group = 'verification'
+    description = 'Verifies published lineage for the example customer procedure.'
+    dependsOn(':lineage:verifyExampleLineage')
 }
 
 tasks.register('startKnowledgeGraph') {
     group = 'lineage'
     description = 'Prepares knowledge graph runtime prerequisites.'
-    dependsOn(':knowledgeGraph:startKnowledgeGraphContainer')
-    outputs.file(reportsDir.map { it.file('knowledge-graph-start-report.html') })
-    doLast {
-        def moduleStartReport = project(':knowledgeGraph').layout.buildDirectory.file('graph-report/container-start-report.json').get().asFile
-        requireFiles([moduleStartReport])
-        writeReport('knowledge-graph-start-report.html', 'Knowledge Graph Start Report', [
-                "containerStartReport=${moduleStartReport}",
-                'status=ready-for-load'
-        ])
-    }
+    dependsOn(':knowledgeGraph:startKnowledgeGraph')
 }
 
 tasks.register('loadKnowledgeGraph') {
     group = 'lineage'
     description = 'Loads architecture and lineage artifacts into graph model.'
-    dependsOn('assembleArchitecture', 'generateLineage', 'startKnowledgeGraph', ':knowledgeGraph:loadKnowledgeGraphStubData')
-    outputs.file(reportsDir.map { it.file('graph-load-report.html') })
-    doLast {
-        def architectureReport = reportsDir.get().file('architecture-report.html').asFile
-        def lineageReport = reportsDir.get().file('lineage-report.html').asFile
-        def knowledgeGraphStartReport = reportsDir.get().file('knowledge-graph-start-report.html').asFile
-        def knowledgeGraphLoadReport = project(':knowledgeGraph').layout.buildDirectory.file('graph-report/load-report.json').get().asFile
-        requireFiles([architectureReport, lineageReport, knowledgeGraphStartReport, knowledgeGraphLoadReport])
-        writeReport('graph-load-report.html', 'Graph Load Report', [
-                "architectureReport=${architectureReport.name}",
-                "lineageReport=${lineageReport.name}",
-                "knowledgeGraphStartReport=${knowledgeGraphStartReport.name}",
-                "knowledgeGraphLoadReport=${knowledgeGraphLoadReport}",
-                "status=loaded"
-        ])
-    }
+    dependsOn(':knowledgeGraph:loadKnowledgeGraph')
 }
 
 tasks.register('verifyKnowledgeGraph') {
     group = 'verification'
     description = 'Runs graph verification checks.'
-    dependsOn('loadKnowledgeGraph', ':knowledgeGraph:verifyKnowledgeGraphModel')
-    outputs.file(reportsDir.map { it.file('graph-report.html') })
-    doLast {
-        def graphLoadReport = reportsDir.get().file('graph-load-report.html').asFile
-        def knowledgeGraphReport = project(':knowledgeGraph').layout.buildDirectory.file('graph-report/verification-report.json').get().asFile
-        def knowledgeGraphDump = project(':knowledgeGraph').layout.buildDirectory.file('graph-report/graph-dump.json').get().asFile
-        requireFiles([graphLoadReport, knowledgeGraphReport, knowledgeGraphDump])
-        def verificationJson = knowledgeGraphReport.text
-        if (!verificationJson.contains('"status": "pass"')) {
-            throw new GradleException("Knowledge graph verification report does not indicate pass: ${knowledgeGraphReport}")
-        }
-        writeReport('graph-report.html', 'Graph Verification Report', [
-                "graphLoadReport=${graphLoadReport.name}",
-                "knowledgeGraphVerification=${knowledgeGraphReport}",
-                "knowledgeGraphDump=${knowledgeGraphDump}",
-                "checks=expected-vertices,expected-relationships,table-lineage",
-                "status=pass"
-        ])
-    }
+    dependsOn(':knowledgeGraph:verifyKnowledgeGraph')
 }
 
 tasks.register('endToEndTest') {
     group = 'verification'
     description = 'Executes full architecture-to-lineage-to-graph scenario.'
-    dependsOn('verifyKnowledgeGraph')
-    outputs.file(reportsDir.map { it.file('end-to-end-report.html') })
-    doLast {
-        def architectureReport = reportsDir.get().file('architecture-report.html').asFile
-        def lineageReport = reportsDir.get().file('lineage-report.html').asFile
-        def graphReport = reportsDir.get().file('graph-report.html').asFile
-        requireFiles([architectureReport, lineageReport, graphReport])
-        writeReport('end-to-end-report.html', 'End-to-End Report', [
-                "step1=${architectureReport.name}",
-                "step2=${lineageReport.name}",
-                "step3=${graphReport.name}",
-                "status=complete"
-        ])
-    }
+    dependsOn(':knowledgeGraph:endToEndTest')
 }

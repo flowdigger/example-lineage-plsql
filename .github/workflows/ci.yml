@@ -69,7 +69,7 @@ jobs:
 #          path: artifacts/structure-contract
 
       - name: Run lineage generation lifecycle
-        run: ./gradlew --no-daemon :application:prepareApplicationAssets :lineage:generateTableLineage generateLineage
+        run: ./gradlew --no-daemon :lineage:generateTableLineage generateLineage verifyExampleLineage
 
       - name: Upload lineage artifacts
         if: always()
@@ -78,8 +78,6 @@ jobs:
           name: lineage-artifacts
           path: |
             build/projects/application/plsql-assets/**
-            build/projects/lineage/ast/**
-            build/projects/lineage/extract/**
             build/lineage-uniform/**
             build/reports/lineage-report.html
 
